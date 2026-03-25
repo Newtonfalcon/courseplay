@@ -23,8 +23,9 @@ export default function BottomNav() {
         className="
           fixed bottom-0 left-0 right-0 z-50
           flex items-center justify-around
+          
           bg-black border-t border-white/[0.06]
-          px-2 pt-2
+          px-2 pt-5
           pb-[env(safe-area-inset-bottom,0px)]
           md:pb-2
           md:bottom-5 md:left-1/2 md:-translate-x-1/2
