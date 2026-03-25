@@ -13,12 +13,40 @@ import BottomNav from "../../../components/Nav";
 
 // ── EMBED HELPERS ─────────────────────────────────────
 
+
 function getYouTubeId(url) {
   try {
     const u = new URL(url);
-    if (u.hostname.includes("youtu.be")) return u.pathname.slice(1).split("?")[0];
-    if (u.hostname.includes("youtube.com")) return u.searchParams.get("v");
-  } catch {}
+
+    // youtu.be/abc123
+    if (u.hostname.includes("youtu.be")) {
+      return u.pathname.slice(1).split("?")[0];
+    }
+
+    // youtube.com/watch?v=abc123
+    if (u.searchParams.get("v")) {
+      return u.searchParams.get("v");
+    }
+
+    // youtube.com/embed/abc123
+    if (u.pathname.includes("/embed/")) {
+      return u.pathname.split("/embed/")[1].split("?")[0];
+    }
+
+    // youtube.com/shorts/abc123
+    if (u.pathname.includes("/shorts/")) {
+      return u.pathname.split("/shorts/")[1].split("?")[0];
+    }
+
+    // youtube.com/live/abc123
+    if (u.pathname.includes("/live/")) {
+      return u.pathname.split("/live/")[1].split("?")[0];
+    }
+
+  } catch (err) {
+    console.error("Invalid URL:", url);
+  }
+
   return null;
 }
 
@@ -48,19 +76,29 @@ function EmbedPlayer({ url }) {
   if (!url) return null;
 
   if (type === "youtube") {
-    const videoId = getYouTubeId(url);
+  const videoId = getYouTubeId(url);
+
+  if (!videoId) {
     return (
-      <div className="lp-embed-wrapper">
-        <iframe
-          className="lp-embed-frame"
-          src={`https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1`}
-          title="Lesson video"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-        />
-      </div>
+      <p style={{ color: "#888", fontSize: 13 }}>
+        Invalid YouTube link
+      </p>
     );
   }
+
+  return (
+    <div className="lp-embed-wrapper">
+      <iframe
+        className="lp-embed-frame"
+        src={`https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1`}
+        title="Lesson video"
+        referrerPolicy="strict-origin-when-cross-origin"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+      />
+    </div>
+  );
+}
 
   if (type === "gdoc") {
     const embedUrl = getGoogleDocsEmbedUrl(url);
