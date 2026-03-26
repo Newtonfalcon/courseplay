@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { db } from "../../../libs/firebase";
+import { db, auth } from "../../../libs/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import {
   FaArrowLeft,
@@ -10,6 +10,7 @@ import {
   FaGlobe,
 } from "react-icons/fa";
 import BottomNav from "../../../components/Nav";
+  import { updateDoc, arrayUnion } from "firebase/firestore";
 
 // ── EMBED HELPERS ─────────────────────────────────────
 
@@ -171,6 +172,29 @@ export default function LessonPage() {
   const [lesson, setLesson] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+
+
+
+
+const trackerRef = doc(db, "courseTracker", `${auth.currentUser.uid}_${courseId}`);
+
+const markLessonVisited = async () => {
+  await updateDoc(trackerRef, {
+    currentLesson: lessonId,
+    completedLessons: arrayUnion(lessonId)
+  });
+};
+
+// Call after lesson data fetched
+useEffect(() => {
+  if (lesson && auth.currentUser) {
+    markLessonVisited();
+  }
+}, [lesson]);
+
+
+
+
 
   useEffect(() => {
     const fetchLesson = async () => {
@@ -498,7 +522,20 @@ export default function LessonPage() {
               >
                 Open Code Editor 💻
               </button>
+
+             
           </div>
+
+           <button
+            className="bg-green-500 px-4 py-2 rounded text-white mt-4"
+            onClick={async () => {
+              const trackerRef = doc(db, "courseTracker", `${auth.currentUser.uid}_${courseId}`);
+              await updateDoc(trackerRef, { completedAt: serverTimestamp() });
+              navigate(`/dashboard/${courseId}/completed`);
+            }}
+          >
+            Finish Course 🎉
+</button>
 
         </div>
       </div>

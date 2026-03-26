@@ -1,7 +1,13 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { db } from "../../../libs/firebase";
-import { collection, doc, getDoc, getDocs, query, orderBy } from "firebase/firestore";
+import { db, auth } from "../../../libs/firebase";
+
+
+
+
+
+
+import { collection, doc, getDoc, setDoc, getDocs, query, orderBy, serverTimestamp } from "firebase/firestore";
 import {
   FaArrowLeft,
   FaBook,
@@ -14,6 +20,9 @@ import {
 } from "react-icons/fa";
 
 import BottomNav from "../../../components/Nav";
+
+
+
 
 // ── HELPERS ──────────────────────────────────────────
 const CATEGORY_ICONS = {
@@ -48,11 +57,39 @@ function SkeletonLesson() {
 
 // ── MAIN ─────────────────────────────────────────────
 export default function CourseDetail() {
+
+
+
+
+
+
   const { courseId } = useParams();
   const [course, setCourse] = useState(null);
   const [lessons, setLessons] = useState([]);
   const [lessonsLoading, setLessonsLoading] = useState(true);
   const navigate = useNavigate();
+
+
+
+  const startCourse = async (lesson) => {
+  if (!auth.currentUser) return;
+
+  const trackerRef = doc(db, "courseTracker", `${auth.currentUser.uid}_${courseId}`);
+  const trackerSnap = await getDoc(trackerRef);
+
+  if (!trackerSnap.exists()) {
+    await setDoc(trackerRef, {
+      userId: auth.currentUser.uid,
+      courseId,
+      startedAt: serverTimestamp(),
+      completedLessons: [],
+      currentLesson: null,
+      completedAt: null
+    });
+  }
+  return navigate(`/dashboard/${courseId}/lesson/${lesson.id}`);
+  
+};
 
   // ─── Fetch course details ─────────────────────
   useEffect(() => {
@@ -512,7 +549,7 @@ export default function CourseDetail() {
                   <div
                     key={lesson.id}
                     className="cd-lesson-row"
-                    onClick={() => navigate(`/dashboard/${courseId}/lesson/${lesson.id}`)}
+                    onClick={() => startCourse(lesson)}
                   >
                     <div className="cd-lesson-num">{lesson.order}</div>
                     <div className="cd-lesson-body">

@@ -14,6 +14,7 @@ import CourseDetail from './pages/dashboard/course/Coursedetails'
 import LessonPage from './pages/dashboard/lessons/Lesson'
 import CodeEditor from './pages/dashboard/code /Code'
 import Profile from './pages/dashboard/user/Profile'
+import Learn from './pages/dashboard/lessons/Learn'
 
 
 
@@ -40,6 +41,7 @@ function App() {
           <Route path="/dashboard/:courseId" element={<ProtectedRoute><CourseDetail /></ProtectedRoute>} />
           <Route path="/dashboard/:courseId/lesson/:lessonId" element={<ProtectedRoute><LessonPage /></ProtectedRoute>} />
           <Route path="/dashboard/:courseId/lesson/:lessonId/code" element={<ProtectedRoute><CodeEditor /></ProtectedRoute>} />
+          <Route path={ROUTES.learn} element={<ProtectedRoute ><Learn /> </ProtectedRoute> } />
         
       </Routes>
     </Router>
