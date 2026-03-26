@@ -2,20 +2,25 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-
-    <!-- 🔥 Leave favicon blank (or remove completely) -->
-    <!-- <link rel="icon" type="image/svg+xml" href="/favicon.svg" /> -->
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-    <!-- 🔥 App Title -->
     <title>CoursePlay ▶</title>
-
-    <!-- Optional: Better SEO / branding -->
     <meta name="description" content="Learn web development interactively with CoursePlay" />
-
-    <!-- Optional: Theme color for mobile browsers -->
     <meta name="theme-color" content="#9333ea" />
+
+    <!--
+      FIX 5 (belt-and-suspenders):
+      Inline style on <html> fires before ANY external CSS or JS loads.
+      This is the earliest possible moment to set the background — it
+      completely eliminates the white flash that appears for ~100-200ms
+      before the browser parses the stylesheet.
+    -->
+    <style>
+      html, body, #root {
+        background: #0a0a0a;
+        margin: 0;
+        padding: 0;
+      }
+    </style>
   </head>
 
   <body>

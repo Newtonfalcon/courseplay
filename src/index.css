@@ -1,2 +1,26 @@
+/* src/index.css */
+/* ─────────────────────────────────────────────
+   FIX 4: Set the body/html background to black in CSS
+   BEFORE any JavaScript runs. This is the root-level
+   fix that eliminates the white flash on cold load —
+   even before React mounts or auth resolves.
+   ───────────────────────────────────────────── */
+
 @import "tailwindcss";
 
+/* These two rules are the critical fix.
+   They run immediately from the CSS file — no JS needed. */
+html,
+body {
+  background-color: #0a0a0a;
+  color: #ffffff;
+  margin: 0;
+  padding: 0;
+}
+
+/* Also set it on the React root so there is never a gap
+   between the html background and the app background. */
+#root {
+  background-color: #0a0a0a;
+  min-height: 100vh;
+}
