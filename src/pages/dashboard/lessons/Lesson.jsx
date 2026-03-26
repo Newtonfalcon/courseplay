@@ -1,53 +1,30 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { db, auth } from "../../../libs/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, arrayUnion, serverTimestamp } from "firebase/firestore";
 import {
   FaArrowLeft,
   FaPlayCircle,
   FaExternalLinkAlt,
   FaFileAlt,
   FaGlobe,
+  FaCode,
+  FaCheckCircle,
+  FaSpinner,
+  FaExclamationCircle,
+  FaTrophy,
 } from "react-icons/fa";
 import BottomNav from "../../../components/Nav";
-  import { updateDoc, arrayUnion } from "firebase/firestore";
+import { ROUTES } from "../../../libs/constants";
 
 // ── EMBED HELPERS ─────────────────────────────────────
-
 
 function getYouTubeId(url) {
   try {
     const u = new URL(url);
-
-    // youtu.be/abc123
-    if (u.hostname.includes("youtu.be")) {
-      return u.pathname.slice(1).split("?")[0];
-    }
-
-    // youtube.com/watch?v=abc123
-    if (u.searchParams.get("v")) {
-      return u.searchParams.get("v");
-    }
-
-    // youtube.com/embed/abc123
-    if (u.pathname.includes("/embed/")) {
-      return u.pathname.split("/embed/")[1].split("?")[0];
-    }
-
-    // youtube.com/shorts/abc123
-    if (u.pathname.includes("/shorts/")) {
-      return u.pathname.split("/shorts/")[1].split("?")[0];
-    }
-
-    // youtube.com/live/abc123
-    if (u.pathname.includes("/live/")) {
-      return u.pathname.split("/live/")[1].split("?")[0];
-    }
-
-  } catch (err) {
-    console.error("Invalid URL:", url);
-  }
-
+    if (u.hostname.includes("youtu.be")) return u.pathname.slice(1).split("?")[0];
+    if (u.hostname.includes("youtube.com")) return u.searchParams.get("v");
+  } catch {}
   return null;
 }
 
@@ -77,29 +54,19 @@ function EmbedPlayer({ url }) {
   if (!url) return null;
 
   if (type === "youtube") {
-  const videoId = getYouTubeId(url);
-
-  if (!videoId) {
+    const videoId = getYouTubeId(url);
     return (
-      <p style={{ color: "#888", fontSize: 13 }}>
-        Invalid YouTube link
-      </p>
+      <div className="lp-embed-wrapper">
+        <iframe
+          className="lp-embed-frame"
+          src={`https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1`}
+          title="Lesson video"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+        />
+      </div>
     );
   }
-
-  return (
-    <div className="lp-embed-wrapper">
-      <iframe
-        className="lp-embed-frame"
-        src={`https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1`}
-        title="Lesson video"
-        referrerPolicy="strict-origin-when-cross-origin"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowFullScreen
-      />
-    </div>
-  );
-}
 
   if (type === "gdoc") {
     const embedUrl = getGoogleDocsEmbedUrl(url);
@@ -166,35 +133,87 @@ function ResourceTypeLabel({ url }) {
   );
 }
 
+// ── FINISH STATUS BANNER ─────────────────────────────
+// idle | saving | success | error
+function FinishCourseBanner({ status, errorMsg }) {
+  if (status === "idle") return null;
+
+  const states = {
+    saving: {
+      bg: "#0f0a1a",
+      border: "#9333ea44",
+      icon: (
+        <span style={{
+          display: "inline-block",
+          width: 14, height: 14,
+          border: "2px solid #9333ea44",
+          borderTopColor: "#9333ea",
+          borderRadius: "50%",
+          animation: "spin 0.7s linear infinite",
+          flexShrink: 0,
+        }} />
+      ),
+      text: "Saving your progress…",
+      color: "#c084fc",
+    },
+    success: {
+      bg: "#052e16",
+      border: "#166534",
+      icon: <FaCheckCircle size={13} style={{ color: "#4ade80", flexShrink: 0 }} />,
+      text: "Course completed! Redirecting…",
+      color: "#4ade80",
+    },
+    error: {
+      bg: "#1a0000",
+      border: "#7f1d1d",
+      icon: <FaExclamationCircle size={13} style={{ color: "#f87171", flexShrink: 0 }} />,
+      text: errorMsg || "Something went wrong. Please try again.",
+      color: "#f87171",
+    },
+  };
+
+  const s = states[status];
+  if (!s) return null;
+
+  return (
+    <div style={{
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+      padding: "12px 16px",
+      background: s.bg,
+      border: `1px solid ${s.border}`,
+      borderRadius: 10,
+      animation: "lp-fade-in 0.25s ease",
+    }}>
+      {s.icon}
+      <span style={{ fontSize: 13, fontWeight: 500, color: s.color }}>{s.text}</span>
+    </div>
+  );
+}
+
 // ── MAIN ─────────────────────────────────────────────
 export default function LessonPage() {
   const { courseId, lessonId } = useParams();
   const [lesson, setLesson] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [finishStatus, setFinishStatus] = useState("idle"); // idle | saving | success | error
+  const [finishError, setFinishError] = useState("");
   const navigate = useNavigate();
 
-
-
-
-const trackerRef = doc(db, "courseTracker", `${auth.currentUser.uid}_${courseId}`);
-
-const markLessonVisited = async () => {
-  await updateDoc(trackerRef, {
-    currentLesson: lessonId,
-    completedLessons: arrayUnion(lessonId)
-  });
-};
-
-// Call after lesson data fetched
-useEffect(() => {
-  if (lesson && auth.currentUser) {
-    markLessonVisited();
-  }
-}, [lesson]);
-
-
-
-
+  // ── Mark lesson visited
+  const markLessonVisited = async () => {
+    if (!auth.currentUser) return;
+    try {
+      const trackerRef = doc(db, "courseTracker", `${auth.currentUser.uid}_${courseId}`);
+      await updateDoc(trackerRef, {
+        currentLesson: lessonId,
+        completedLessons: arrayUnion(lessonId),
+      });
+    } catch (err) {
+      console.error("[markLessonVisited]", err);
+    }
+  };
 
   useEffect(() => {
     const fetchLesson = async () => {
@@ -215,6 +234,34 @@ useEffect(() => {
     fetchLesson();
   }, [courseId, lessonId]);
 
+  useEffect(() => {
+    if (lesson && auth.currentUser) {
+      markLessonVisited();
+    }
+  }, [lesson]);
+
+  // ── Finish course handler
+  const handleFinishCourse = async () => {
+    if (finishStatus === "saving" || finishStatus === "success") return;
+    setFinishStatus("saving");
+    setFinishError("");
+
+    try {
+      const trackerRef = doc(db, "courseTracker", `${auth.currentUser.uid}_${courseId}`);
+      await updateDoc(trackerRef, {
+        completedAt: serverTimestamp(),
+        completedLessons: arrayUnion(lessonId),
+        currentLesson: lessonId,
+      });
+      setFinishStatus("success");
+      setTimeout(() => navigate(ROUTES.completed), 1400);
+    } catch (err) {
+      console.error("[handleFinishCourse]", err);
+      setFinishError(err.message || "Could not save progress.");
+      setFinishStatus("error");
+    }
+  };
+
   if (loading) return (
     <div className="lp-loading-screen">
       <div className="lp-loading-spinner" />
@@ -229,6 +276,9 @@ useEffect(() => {
     </div>
   );
 
+  const isSaving = finishStatus === "saving";
+  const isDone   = finishStatus === "success";
+
   return (
     <>
       <style>{`
@@ -240,7 +290,7 @@ useEffect(() => {
           font-family: 'DM Sans', sans-serif;
           background: #0a0a0a;
           min-height: 100vh;
-          padding: 48px 16px 100px;
+          padding: 48px 16px 120px;
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -265,6 +315,16 @@ useEffect(() => {
         }
 
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        @keyframes lp-fade-in {
+          from { opacity: 0; transform: translateY(-5px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes lp-shimmer-btn {
+          0%   { background-position: -200% center; }
+          100% { background-position:  200% center; }
+        }
 
         .lp-inner {
           width: 100%;
@@ -293,11 +353,7 @@ useEffect(() => {
         .lp-back:hover { color: #aaa; }
 
         /* ── HEADER ── */
-        .lp-header {
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-        }
+        .lp-header { display: flex; flex-direction: column; gap: 6px; }
 
         .lp-eyebrow {
           font-size: 11px;
@@ -317,17 +373,8 @@ useEffect(() => {
         }
 
         /* ── EMBED ── */
-        .lp-embed-section {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-        }
-
-        .lp-embed-label {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-        }
+        .lp-embed-section { display: flex; flex-direction: column; gap: 10px; }
+        .lp-embed-label { display: flex; align-items: center; justify-content: space-between; }
 
         .lp-resource-type-badge {
           display: inline-flex;
@@ -346,16 +393,14 @@ useEffect(() => {
         .lp-embed-wrapper {
           position: relative;
           width: 100%;
-          padding-top: 56.25%; /* 16:9 */
+          padding-top: 56.25%;
           background: #0d0d0d;
           border: 1px solid #1f1f1f;
           border-radius: 14px;
           overflow: hidden;
         }
 
-        .lp-embed-tall {
-          padding-top: 75%;
-        }
+        .lp-embed-tall { padding-top: 75%; }
 
         .lp-embed-frame {
           position: absolute;
@@ -366,107 +411,106 @@ useEffect(() => {
           border-radius: 14px;
         }
 
-        /* Fallback resource card */
+        /* fallback */
         .lp-resource-fallback {
-          display: flex;
-          align-items: center;
-          gap: 14px;
-          padding: 16px 18px;
-          background: #111;
-          border: 1px solid #1f1f1f;
-          border-radius: 12px;
-          text-decoration: none;
-          transition: border-color 0.2s;
-          cursor: pointer;
+          display: flex; align-items: center; gap: 14px;
+          padding: 16px 18px; background: #111;
+          border: 1px solid #1f1f1f; border-radius: 12px;
+          text-decoration: none; transition: border-color 0.2s; cursor: pointer;
         }
         .lp-resource-fallback:hover { border-color: #9333ea44; }
-
         .lp-resource-fallback-icon {
-          width: 36px;
-          height: 36px;
-          border-radius: 8px;
-          background: #1a0a2e;
-          border: 1px solid #9333ea33;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: #c084fc;
-          font-size: 15px;
-          flex-shrink: 0;
+          width: 36px; height: 36px; border-radius: 8px;
+          background: #1a0a2e; border: 1px solid #9333ea33;
+          display: flex; align-items: center; justify-content: center;
+          color: #c084fc; font-size: 15px; flex-shrink: 0;
         }
-
-        .lp-resource-fallback-title {
-          font-family: 'Syne', sans-serif;
-          font-size: 13px;
-          font-weight: 700;
-          color: #fff;
-          margin: 0;
-        }
-
-        .lp-resource-fallback-url {
-          font-size: 11px;
-          color: #444;
-          margin: 2px 0 0;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          max-width: 340px;
-        }
+        .lp-resource-fallback-title { font-family:'Syne',sans-serif; font-size:13px; font-weight:700; color:#fff; margin:0; }
+        .lp-resource-fallback-url { font-size:11px; color:#444; margin:2px 0 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:340px; }
 
         /* ── DIVIDER ── */
-        .lp-divider {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
+        .lp-divider { display: flex; align-items: center; gap: 10px; }
         .lp-divider-line { flex: 1; height: 1px; background: #1a1a1a; }
-        .lp-divider-label {
-          font-size: 10px;
-          color: #2a2a2a;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-        }
+        .lp-divider-label { font-size: 10px; color: #2a2a2a; letter-spacing: 0.08em; text-transform: uppercase; }
 
-        /* ── CONTENT CARD ── */
-        .lp-content-card {
+        /* ── CONTENT ── */
+        .lp-content-card { background: #111; border: 1px solid #1f1f1f; border-radius: 16px; padding: 24px; }
+        .lp-content-inner { font-size: 15px; color: #aaa; line-height: 1.8; white-space: pre-wrap; word-break: break-word; margin: 0; }
+
+        /* ── ACTION PANEL ── */
+        .lp-action-panel {
           background: #111;
           border: 1px solid #1f1f1f;
           border-radius: 16px;
-          padding: 24px;
+          padding: 20px;
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
         }
 
-        .lp-content-inner {
-          font-size: 15px;
-          color: #aaa;
-          line-height: 1.8;
-          white-space: pre-wrap;
-          word-break: break-word;
-          margin: 0;
-        }
-
-        /* ── FOOTER ── */
-        .lp-footer {
+        .lp-action-row {
           display: flex;
           gap: 10px;
-          padding-top: 4px;
+          flex-wrap: wrap;
         }
 
+        /* Back */
         .lp-btn-back {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          padding: 12px 20px;
-          background: transparent;
-          border: 1px solid #2a2a2a;
-          border-radius: 10px;
-          color: #666;
-          font-family: 'DM Sans', sans-serif;
-          font-size: 14px;
-          font-weight: 500;
-          cursor: pointer;
-          transition: border-color 0.2s, color 0.2s;
+          display: inline-flex; align-items: center; gap: 8px;
+          padding: 12px 18px;
+          background: transparent; border: 1px solid #2a2a2a; border-radius: 10px;
+          color: #666; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
+          cursor: pointer; transition: border-color 0.2s, color 0.2s;
         }
         .lp-btn-back:hover { border-color: #444; color: #aaa; }
+
+        /* Code editor */
+        .lp-btn-code {
+          display: inline-flex; align-items: center; gap: 8px;
+          padding: 12px 18px;
+          background: #1a0a2e; border: 1px solid #9333ea33; border-radius: 10px;
+          color: #c084fc; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
+          cursor: pointer; transition: background 0.2s, border-color 0.2s;
+        }
+        .lp-btn-code:hover { background: #2a0f42; border-color: #9333ea66; }
+
+        /* Finish course */
+        .lp-btn-finish {
+          display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+          padding: 13px 22px;
+          background: #14532d; border: 1px solid #166534; border-radius: 10px;
+          color: #4ade80; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+          cursor: pointer; letter-spacing: 0.02em;
+          transition: background 0.2s, border-color 0.2s, transform 0.1s, opacity 0.2s;
+          position: relative; overflow: hidden;
+          margin-left: auto;
+        }
+        .lp-btn-finish:hover:not(:disabled) { background: #166534; border-color: #22c55e88; }
+        .lp-btn-finish:active:not(:disabled) { transform: scale(0.97); }
+        .lp-btn-finish:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .lp-btn-finish.saving {
+          background: #1a0a2e;
+          border-color: #9333ea44;
+          color: #c084fc;
+        }
+
+        .lp-btn-finish.done {
+          background: #052e16;
+          border-color: #166534;
+          color: #4ade80;
+          pointer-events: none;
+        }
+
+        .lp-btn-spin {
+          display: inline-block;
+          width: 13px; height: 13px;
+          border: 2px solid #c084fc44;
+          border-top-color: #c084fc;
+          border-radius: 50%;
+          animation: spin 0.7s linear infinite;
+          flex-shrink: 0;
+        }
       `}</style>
 
       <div className="lp-root">
@@ -507,38 +551,50 @@ useEffect(() => {
             <p className="lp-content-inner">{lesson.content}</p>
           </div>
 
-          {/* ── FOOTER ── */}
-          <div className="lp-footer">
-            <button
-              className="lp-btn-back"
-              onClick={() => navigate(`/dashboard/${courseId}`)}
-            >
-              <FaArrowLeft size={11} /> Back to Lessons
-            </button>
+          {/* ── ACTION PANEL ── */}
+          <div className="lp-action-panel">
 
-            <button
-                onClick={() => navigate(`/dashboard/${courseId}/lesson/${lessonId}/code`)}
-                className="bg-purple-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-purple-500 transition"
+            {/* Status banner — only shows when not idle */}
+            <FinishCourseBanner status={finishStatus} errorMsg={finishError} />
+
+            <div className="lp-action-row">
+
+              {/* Back */}
+              <button
+                className="lp-btn-back"
+                onClick={() => navigate(`/dashboard/${courseId}`)}
+                disabled={isSaving}
               >
-                Open Code Editor 💻
+                <FaArrowLeft size={10} /> Lessons
               </button>
 
-             
-          </div>
+              {/* Code editor */}
+              <button
+                className="lp-btn-code"
+                onClick={() => navigate(`/dashboard/${courseId}/lesson/${lessonId}/code`)}
+                disabled={isSaving}
+              >
+                <FaCode size={11} /> Code Editor
+              </button>
 
-           <button
-            className="bg-green-500 px-4 py-2 rounded text-white mt-4"
-            onClick={async () => {
-              const trackerRef = doc(db, "courseTracker", `${auth.currentUser.uid}_${courseId}`);
-              await updateDoc(trackerRef, { completedAt: serverTimestamp() });
-              navigate(`/dashboard/${courseId}/completed`);
-            }}
-          >
-            Finish Course 🎉
-</button>
+              {/* Finish Course */}
+              <button
+                className={`lp-btn-finish ${isSaving ? "saving" : ""} ${isDone ? "done" : ""}`}
+                onClick={handleFinishCourse}
+                disabled={isSaving || isDone}
+              >
+                {isSaving && <span className="lp-btn-spin" />}
+                {!isSaving && !isDone && <FaTrophy size={12} />}
+                {isDone    && <FaCheckCircle size={12} />}
+                {isSaving ? "Saving…" : isDone ? "Completed!" : "Finish Course"}
+              </button>
+
+            </div>
+          </div>
 
         </div>
       </div>
+
       <BottomNav />
     </>
   );

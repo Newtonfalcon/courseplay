@@ -82,7 +82,8 @@ export const ROUTES = {
   signin:     "/auth/signin",
   signup:     "/auth/signup",
   code:       "/code-editor",
-  learn: "/dashboard/learn",
+  learn: "/learn",
+  completed: "/dashboard/completed",
   forgotPassword: "/auth/forgot-password",
 };
 
