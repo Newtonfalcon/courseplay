@@ -3,17 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CoursePlay ▶</title>
-    <meta name="description" content="Learn web development interactively with CoursePlay" />
-    <meta name="theme-color" content="#9333ea" />
 
-    <!--
-      FIX 5 (belt-and-suspenders):
-      Inline style on <html> fires before ANY external CSS or JS loads.
-      This is the earliest possible moment to set the background — it
-      completely eliminates the white flash that appears for ~100-200ms
-      before the browser parses the stylesheet.
-    -->
+    <!-- ── Prevent white flash before JS/CSS loads ── -->
     <style>
       html, body, #root {
         background: #0a0a0a;
@@ -21,6 +12,87 @@
         padding: 0;
       }
     </style>
+
+    <!-- ═══════════════════════════════════════════
+         PRIMARY META
+    ════════════════════════════════════════════ -->
+    <title>CoursePlay — Learn Without Limits</title>
+    <meta name="description" content="CoursePlay is a next-generation e-learning platform. Browse expert-led courses, build real skills, and earn certificates — at your own pace." />
+    <meta name="keywords" content="e-learning, online courses, web development, programming, design, learn to code, CoursePlay, Netech" />
+    <meta name="author" content="Netech" />
+    <meta name="robots" content="index, follow" />
+    <meta name="theme-color" content="#9333ea" />
+    <link rel="canonical" href="https://courseplay.vercel.app" />
+
+    <!-- ═══════════════════════════════════════════
+         FAVICON & APP ICONS
+    ════════════════════════════════════════════ -->
+    <link rel="icon"             type="image/png"  href="/logo.png" />
+    <link rel="apple-touch-icon"                   href="/logo.png" />
+    <link rel="shortcut icon"    type="image/png"  href="/logo.png" />
+
+    <!-- ═══════════════════════════════════════════
+         OPEN GRAPH  (Facebook, LinkedIn, WhatsApp,
+         Discord, Slack, Telegram…)
+    ════════════════════════════════════════════ -->
+    <meta property="og:type"        content="website" />
+    <meta property="og:site_name"   content="CoursePlay" />
+    <meta property="og:url"         content="https://courseplay.vercel.app" />
+    <meta property="og:title"       content="CoursePlay — Learn Without Limits" />
+    <meta property="og:description" content="Expert-led courses, hands-on projects, and real certificates. Start learning free on CoursePlay." />
+    <meta property="og:image"       content="https://courseplay.vercel.app/logo.png" />
+    <meta property="og:image:alt"   content="CoursePlay logo" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height"content="630" />
+    <meta property="og:locale"      content="en_US" />
+
+    <!-- ═══════════════════════════════════════════
+         TWITTER / X CARD
+    ════════════════════════════════════════════ -->
+    <meta name="twitter:card"        content="summary_large_image" />
+    <meta name="twitter:site"        content="@courseplay" />
+    <meta name="twitter:creator"     content="@netech" />
+    <meta name="twitter:url"         content="https://courseplay.vercel.app" />
+    <meta name="twitter:title"       content="CoursePlay — Learn Without Limits" />
+    <meta name="twitter:description" content="Expert-led courses, hands-on projects, and real certificates. Start learning free on CoursePlay." />
+    <meta name="twitter:image"       content="https://courseplay.vercel.app/logo.png" />
+    <meta name="twitter:image:alt"   content="CoursePlay logo" />
+
+    <!-- ═══════════════════════════════════════════
+         PWA / MOBILE APP EXPERIENCE
+    ════════════════════════════════════════════ -->
+    <meta name="application-name"                content="CoursePlay" />
+    <meta name="apple-mobile-web-app-title"      content="CoursePlay" />
+    <meta name="apple-mobile-web-app-capable"    content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="mobile-web-app-capable"          content="yes" />
+    <meta name="format-detection"                content="telephone=no" />
+
+    <!-- ═══════════════════════════════════════════
+         STRUCTURED DATA  (Google rich results)
+    ════════════════════════════════════════════ -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "CoursePlay",
+      "url": "https://courseplay.vercel.app",
+      "description": "Next-generation e-learning platform for curious minds.",
+      "publisher": {
+        "@type": "Organization",
+        "name": "Netech",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://courseplay.vercel.app/logo.png"
+        }
+      },
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://courseplay.vercel.app/dashboard?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
   </head>
 
   <body>
