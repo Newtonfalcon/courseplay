@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { db, auth } from "../../../libs/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
+import {ROUTES} from "../../../libs/constants";
 import {
   FaPlay,
   FaBookOpen,
@@ -444,7 +445,7 @@ export default function Learn() {
                 <div className="ln-empty-icon"><FaCompass /></div>
                 <p className="ln-empty-title">Nothing here yet</p>
                 <p className="ln-empty-sub">You haven't started any course yet.</p>
-                <button className="ln-browse-btn" onClick={() => navigate("/dashboard/courses")}>
+                <button className="ln-browse-btn" onClick={() => navigate(ROUTES.dashboard)}>
                   <FaCompass size={11} /> Browse Courses
                 </button>
               </div>
